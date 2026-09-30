@@ -3,7 +3,8 @@
 ![devin-tui: home screen and /model picker with per-model reasoning levels and pricing](docs/demo.gif)
 
 A custom full-screen terminal UI for Devin, driven by `devin acp` (Agent Client
-Protocol — JSON-RPC over stdio). React + Ink, black & white.
+Protocol — JSON-RPC over stdio). React + Ink, black & white by default, with
+opt-in color themes.
 
 > Unofficial — not affiliated with or endorsed by Cognition. "Devin" and the
 > Devin logo are trademarks of Cognition.
@@ -54,7 +55,13 @@ devin-tui --model <name>         # passed through to devin acp --model
 devin-tui -c | --continue        # resume the newest session in this cwd
 devin-tui -r <id> | --resume <id>  # load a specific session id
 devin-tui --agent "<cmd>"        # spawn a different ACP agent command
+devin-tui --theme nord           # color theme: mono (default), light, nord, auto
 ```
+
+Themes need a truecolor terminal (`COLORTERM=truecolor`). Pick one with
+`--theme`, `DEVIN_TUI_THEME`, or `/theme` inside the app (saved to
+`~/.config/devin-tui/config.json`). `auto` follows your terminal's
+background: light terminals get `light`, dark ones `mono`.
 
 The first launch asks you to sign in — it runs the Devin CLI's browser-based
 auth flow; there is no API-key prompt.

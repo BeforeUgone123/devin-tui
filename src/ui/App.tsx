@@ -55,6 +55,7 @@ import {
 	defaultSidekickIdx,
 	filterFusion,
 	filterResume,
+	filterThemes,
 	filteredOptions,
 	fusionData,
 	rowLevelIdx,
@@ -63,7 +64,10 @@ import {
 	type FusionView,
 	type PickerView,
 	type ResumeView,
+	type ThemeView,
 } from './picker.js';
+import {setTheme, THEME_PREFS, themePref} from '../theme.js';
+import {writeConfig} from '../config.js';
 import {transcriptDigest} from './transcript.js';
 import {
 	buildHandoffPrompt,
@@ -91,6 +95,7 @@ const LOCAL_COMMANDS: SlashCommand[] = [
 	{name: 'model', description: 'switch model and effort', local: true},
 	{name: 'fusion', description: 'choose a Fusion lead + sidekick', local: true},
 	{name: 'resume', description: 'resume a previous session', local: true},
+	{name: 'theme', description: 'choose a color theme', local: true},
 	{name: 'handoff', description: 'hand off to a cloud Devin', local: true},
 	{name: 'login', description: 'sign in to the agent', local: true},
 	{name: 'logout', description: 'sign out of the agent', local: true},
@@ -132,11 +137,13 @@ interface Props {
 	command: string;
 	/** 'continue' = newest session for cwd; otherwise a session id */
 	resume?: string;
+	/** unknown-theme fallback notice, shown once the session is ready */
+	themeWarning?: string;
 	onQuit: () => void;
 	onConn: (c: AgentConn) => void;
 }
 
-export function App({cwd, model, command, resume, onQuit, onConn}: Props): React.JSX.Element {
+export function App({cwd, model, command, resume, themeWarning, onQuit, onConn}: Props): React.JSX.Element {
 	const [state, dispatch] = useReducer(reducer, undefined, () =>
 		initialState(cwd, model, ''),
 	);
@@ -158,6 +165,7 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 	const [picker, setPicker] = useState<PickerView | null>(null);
 	const [fusion, setFusion] = useState<FusionView | null>(null);
 	const [resumeView, setResumeView] = useState<ResumeView | null>(null);
+	const [themeView, setThemeView] = useState<ThemeView | null>(null);
 	// pending /handoff confirmation — prompt prebuilt, shown above composer
 	const [handoff, setHandoff] = useState<(HandoffInfo & {prompt: string}) | null>(null);
 	// model pricing catalog for the /model + /fusion pickers — loaded
@@ -179,6 +187,14 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 			if (v) dispatch({type: 'updateAvailable', version: v});
 		});
 	}, [command]);
+	// an unknown --theme/env/config name fell back to mono — say so once the
+	// session is ready (a transcript line on the boot/auth home would hide
+	// the sign-in menu)
+	useEffect(() => {
+		if (!themeWarning || themeWarned.current || state.status !== 'idle') return;
+		themeWarned.current = true;
+		dispatch({type: 'systemMsg', text: themeWarning});
+	}, [themeWarning, state.status]);
 	// image attachment chips (▣) + the @file dropdown
 	const [atts, setAtts] = useState<ImageAttachment[]>([]);
 	const [files, setFiles] = useState<string[] | null>(null);
@@ -201,6 +217,9 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 	catalogRef.current = catalog;
 	const resumeRef = useRef<ResumeView | null>(resumeView);
 	resumeRef.current = resumeView;
+	const themeRef = useRef<ThemeView | null>(themeView);
+	themeRef.current = themeView;
+	const themeWarned = useRef(false);
 	/** -c/-r session-load intent; survives the auth detour */
 	const pendingResume = useRef(resume);
 	const filesRef = useRef<string[] | null>(null);
@@ -750,6 +769,14 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 		setFusion({sel: Math.max(0, curIdx), filter: '', sk: {}});
 	}, [flash]);
 
+	/** /theme — inline picker over the bundled themes (live preview). */
+	const openTheme = useCallback(() => {
+		const cur = themePref();
+		setPrompt({value: '', cursor: 0});
+		setPaletteSel(0);
+		setThemeView({sel: Math.max(0, THEME_PREFS.indexOf(cur)), filter: '', orig: cur});
+	}, []);
+
 	/** /resume — list this cwd's sessions and open the inline picker. */
 	const openResume = useCallback(async () => {
 		const s = stateRef.current;
@@ -942,6 +969,10 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 				setPaletteSel(0);
 				return;
 			}
+			if (t === '/theme') {
+				openTheme();
+				return;
+			}
 			if (t === '/resume') {
 				void openResume();
 				setPrompt({value: '', cursor: 0});
@@ -1066,6 +1097,9 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 				case 'resume':
 					void openResume();
 					break;
+				case 'theme':
+					openTheme();
+					break;
 				case 'model':
 					openPicker();
 					break;
@@ -1092,7 +1126,7 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 					break;
 			}
 		},
-		[submit, cycleMode, openPicker, openFusion, openResume, doLogin, doLogout, doStatus, openHelp, onQuit],
+		[submit, cycleMode, openPicker, openFusion, openResume, openTheme, doLogin, doLogout, doStatus, openHelp, onQuit],
 	);
 
 	// ---- input ----------------------------------------------------------------
@@ -1140,6 +1174,7 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 			pickerRef.current !== null ||
 			fusionRef.current !== null ||
 			resumeRef.current !== null ||
+			themeRef.current !== null ||
 			panelOpenRef.current ||
 			helpOpenRef.current ||
 			handoffRef.current !== null
@@ -1336,6 +1371,48 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 				setResumeView({...rv, filter: rv.filter.slice(0, -1), sel: 0});
 			} else if (input && !key.ctrl && !key.meta) {
 				setResumeView({...rv, filter: rv.filter + input, sel: 0});
+			}
+			return;
+		}
+
+		// theme picker captures all input while open; the selected row is
+		// previewed live, Esc restores the theme it opened with
+		const tv = themeRef.current;
+		if (tv) {
+			const pick = (v: ThemeView) => {
+				const list = filterThemes(THEME_PREFS, v.filter);
+				setTheme(list[Math.min(v.sel, list.length - 1)] ?? v.orig);
+				setThemeView(v);
+			};
+			const list = filterThemes(THEME_PREFS, tv.filter);
+			const n = Math.max(1, list.length);
+			if (key.escape) {
+				setTheme(tv.orig);
+				setThemeView(null);
+			} else if (key.upArrow) {
+				pick({...tv, sel: (tv.sel - 1 + n) % n});
+			} else if (key.downArrow) {
+				pick({...tv, sel: (tv.sel + 1) % n});
+			} else if (key.return) {
+				const target = list[Math.min(tv.sel, list.length - 1)];
+				setThemeView(null);
+				if (!target) {
+					setTheme(tv.orig);
+				} else {
+					setTheme(target);
+					try {
+						writeConfig({theme: target});
+					} catch (e) {
+						dispatch({
+							type: 'systemMsg',
+							text: `theme not saved: ${errMsg(e)}`,
+						});
+					}
+				}
+			} else if (key.backspace || key.delete) {
+				pick({...tv, filter: tv.filter.slice(0, -1), sel: 0});
+			} else if (input && !key.ctrl && !key.meta) {
+				pick({...tv, filter: tv.filter + input, sel: 0});
 			}
 			return;
 		}
@@ -1681,6 +1758,7 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 					picker: picker ?? undefined,
 					fusion: fusion ?? undefined,
 					resume: resumeView ?? undefined,
+					theme: themeView ?? undefined,
 					paletteSel,
 					slashItems,
 					slashOpen: filter !== null && slashItems.length > 0,
@@ -1712,6 +1790,7 @@ export function App({cwd, model, command, resume, onQuit, onConn}: Props): React
 					modelPicker: picker ?? undefined,
 					fusion: fusion ?? undefined,
 					resume: resumeView ?? undefined,
+					theme: themeView ?? undefined,
 					permSel,
 					handoff: handoff ?? undefined,
 				},

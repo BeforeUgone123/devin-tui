@@ -4,6 +4,9 @@ import React from 'react';
 import {render} from 'ink';
 import {App} from './ui/App.js';
 import {defaultLogFile, type AgentConn} from './acp/connection.js';
+import {resolveTheme} from './config.js';
+import {setTermBg, setTheme} from './theme.js';
+import {detectTermBg} from './termbg.js';
 
 interface CliArgs {
 	cwd: string;
@@ -11,6 +14,7 @@ interface CliArgs {
 	command: string;
 	/** 'continue' = newest session for cwd; otherwise a session id */
 	resume?: string;
+	theme?: string;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -27,9 +31,11 @@ function parseArgs(argv: string[]): CliArgs {
 			args.resume = 'continue';
 		} else if (a === '-r' || a === '--resume') {
 			args.resume = argv[++i] ?? '';
+		} else if (a === '--theme') {
+			args.theme = argv[++i] ?? '';
 		} else if (a === '--help' || a === '-h') {
 			process.stderr.write(
-				'usage: devin-tui [--cwd <dir>] [--model <name>] [--agent "<cmd>"] [-c|--continue] [-r|--resume <id>]\n',
+				'usage: devin-tui [--cwd <dir>] [--model <name>] [--agent "<cmd>"] [-c|--continue] [-r|--resume <id>] [--theme <name>]\n',
 			);
 			process.exit(0);
 		}
@@ -40,7 +46,7 @@ function parseArgs(argv: string[]): CliArgs {
 const ENTER_ALT = '\x1b[?1049h\x1b[?25l\x1b]0;devin-tui\x07';
 const LEAVE_ALT = '\x1b[?25h\x1b[?1049l\x1b]0;devin-tui\x07';
 
-function main(): void {
+async function main(): Promise<void> {
 	const args = parseArgs(process.argv.slice(2));
 	if (!fs.statSync(args.cwd, {throwIfNoEntry: false})?.isDirectory()) {
 		process.stderr.write(`devin-tui: --cwd is not a directory: ${args.cwd}\n`);
@@ -49,6 +55,17 @@ function main(): void {
 	if (!process.stdout.isTTY) {
 		process.stderr.write('devin-tui: stdout is not a terminal\n');
 		process.exit(1);
+	}
+
+	const theme = resolveTheme(args.theme);
+	setTermBg(await detectTermBg());
+	setTheme(theme.name);
+	if (theme.warning) {
+		try {
+			fs.appendFileSync(defaultLogFile(), `\ndevin-tui: ${theme.warning}\n`);
+		} catch {
+			// diagnostics must never throw
+		}
 	}
 
 	let conn: AgentConn | undefined;
@@ -70,6 +87,7 @@ function main(): void {
 			model={args.model}
 			command={args.command}
 			resume={args.resume}
+			themeWarning={theme.warning}
 			onQuit={() => quit(0)}
 			onConn={c => (conn = c)}
 		/>,
@@ -123,4 +141,4 @@ function main(): void {
 	});
 }
 
-main();
+void main();

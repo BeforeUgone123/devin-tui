@@ -17,10 +17,13 @@ import {
 	fusionLines,
 	pickerLines,
 	resumeLines,
+	themeLines,
 	type FusionView,
 	type PickerView,
 	type ResumeView,
+	type ThemeView,
 } from './picker.js';
+import {THEME_PREFS} from '../theme.js';
 import {
 	displayMode,
 	displayModel,
@@ -45,6 +48,7 @@ export interface SessionUI {
 	modelPicker?: PickerView; // /model picker state, above the input panel
 	fusion?: FusionView; // /fusion picker state, above the input panel
 	resume?: ResumeView; // /resume picker state, above the input panel
+	theme?: ThemeView; // /theme picker state, above the input panel
 	permSel: number; // selected option in the inline permission prompt
 	handoff?: HandoffInfo; // /handoff confirmation, above the input panel
 	catalog: CatalogState; // model pricing catalog (pickers)
@@ -121,6 +125,7 @@ export function sessionLines(
 	const resumeRows = ui.resume
 		? resumeLines(ui.resume, s.sessionId, s.cwd, w)
 		: [];
+	const themeRows = ui.theme ? themeLines(ui.theme, THEME_PREFS, w) : [];
 	const handoffRows = ui.handoff ? handoffBlock(ui.handoff, w) : [];
 	const aux = [
 		...plan,
@@ -129,6 +134,7 @@ export function sessionLines(
 		...modelPk,
 		...fusionRows,
 		...resumeRows,
+		...themeRows,
 		...dropdown,
 		...handoffRows,
 	];

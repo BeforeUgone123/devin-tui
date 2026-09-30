@@ -7,6 +7,10 @@ scenarios:
   boot   - quit during the boot screen (ctrl+c x2)
   full   - prompt, permission 'y', palette, scroll, cancel, quit
   short  - prompt, permission 'y', quit (for the 80-col layout)
+  theme  - /theme picker: preview, apply (writes $DEVIN_TUI_CONFIG), esc
+
+The PTY answers the startup DA1 query; set DRIVE_TERM_BG=rgb:ffff/ffff/ffff
+to also answer OSC 11 (terminal background, for `--theme auto`).
 """
 import fcntl
 import os
@@ -594,6 +598,23 @@ SCENARIOS = {
         (0.4, b"\x03"),
         (1.0, b""),
     ],
+    # /theme picker: live preview on ↓, Enter applies + writes config.json
+    # (point DEVIN_TUI_CONFIG at a scratch file), reopen + Esc restores
+    "theme": [
+        (6.0, b"\r"),             # needsAuth menu -> auth
+        (2.5, b"/theme"),
+        (0.3, b"\r"),             # picker open on the active theme
+        (1.0, b"\x1b[B"),         # ↓ preview next theme
+        (1.0, b"\x1b[B"),         # ↓ preview next theme
+        (1.0, b"\r"),             # apply + persist
+        (1.0, b"/theme"),
+        (0.3, b"\r"),             # reopen
+        (1.0, b"\x1b[B"),         # ↓ preview
+        (1.0, ESC),               # esc restores
+        (1.0, b"\x03"),
+        (0.4, b"\x03"),
+        (1.0, b""),
+    ],
 }
 
 
@@ -631,6 +652,20 @@ def main() -> int:
 
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
     out = open(rawfile, "wb")
+
+    # act like a terminal for the startup background query: always answer
+    # DA1; answer OSC 11 only when DRIVE_TERM_BG=rgb:RRRR/GGGG/BBBB is set
+    term_bg = os.environ.get("DRIVE_TERM_BG")
+    seen = b""
+
+    def answer(data: bytes) -> None:
+        nonlocal seen
+        seen = (seen + data)[-64:]
+        if b"\x1b]11;?" in seen and term_bg:
+            os.write(fd, b"\x1b]11;" + term_bg.encode() + b"\x1b\\")
+        if b"\x1b[c" in seen:
+            os.write(fd, b"\x1b[?62;22c")
+            seen = b""
     deadline = time.time() + 90
     alive = True
     for delay, keys in events:
@@ -647,6 +682,7 @@ def main() -> int:
                     alive = False
                     break
                 out.write(data)
+                answer(data)
         if not alive:
             break
         if keys:

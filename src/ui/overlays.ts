@@ -61,6 +61,7 @@ export interface PanelItem {
 		| {type: 'insert'; text: string}
 		| {type: 'help'}
 		| {type: 'resume'}
+		| {type: 'theme'}
 		| {type: 'quit'};
 }
 
@@ -73,6 +74,7 @@ export const LOCAL_RESERVED = new Set([
 	'handoff',
 	'fusion',
 	'resume',
+	'theme',
 	'help',
 	'exit',
 	'quit',
@@ -166,6 +168,13 @@ export function panelItems(s: State): PanelItem[] {
 			label: 'Status',
 			desc: 'show session status',
 			action: {type: 'status'},
+		},
+		{
+			section: 'App',
+			label: 'Switch theme',
+			desc: 'choose a color theme',
+			hint: '/theme',
+			action: {type: 'theme'},
 		},
 		{
 			section: 'App',

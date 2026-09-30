@@ -1,7 +1,8 @@
 # devin-tui
 
 A custom full-screen terminal UI for Devin, driven by `devin acp`
-(Agent Client Protocol — JSON-RPC over stdio). React + Ink, black & white only.
+(Agent Client Protocol — JSON-RPC over stdio). React + Ink, black & white by
+default, opt-in color themes.
 
 Read `specs/devin-tui.md` first — it is the source of truth for UI/behavior.
 Update the spec, don't patch around it.
@@ -56,9 +57,13 @@ npx tsx scripts/check-real-devin.ts
 
 ## Design rules — do not break these
 
-- **Grayscale only.** All styling goes through the named tokens in
-  `src/theme.ts` — a black-and-white palette where depth comes from gray
-  background shades, never hue. Never pass `color=` or `backgroundColor=`
+- **Monochrome by default, themes are data.** All styling goes through the
+  named tokens in `src/theme.ts`. The default `mono` theme is a
+  black-and-white palette where depth comes from gray background shades,
+  never hue; other bundled themes (`THEMES`, selected via `--theme` /
+  `DEVIN_TUI_THEME` / `~/.config/devin-tui/config.json` / `/theme`) must
+  cover every `Token` and `Bg` key and follow the same hue exceptions
+  within their own palette. Never pass `color=` or `backgroundColor=`
   to Ink components; only `theme.ts` maps tokens to styles. Truecolor
   backgrounds/hex foregrounds apply only when `COLORTERM` is
   `truecolor`/`24bit`; otherwise the UI falls back to bold/dim/inverse
@@ -67,7 +72,11 @@ npx tsx scripts/check-real-devin.ts
   the Devin CLI `/model` picker's blue), success/fail tool dots
   (`ok`/`err`), diff `+`/`−` lines and stats (`diffAdd`/`diffDel` bgs),
   `$ command` highlighting (`cmdFlag`/`cmdString`), and the yellow
-  `bypass permissions on` composer tag (`pkYellow`).
+  `bypass permissions on` composer tag (`pkYellow`). Themes only affect
+  the truecolor path; `MONO` is shared. `Seg.hex` (price-slider gradient)
+  is derived from the active theme's `pk*` fgs — never hardcode colors
+  outside `theme.ts`. `auto` follows the terminal background (OSC 11 /
+  `COLORFGBG`, `src/termbg.ts`).
 - **Config capture is debug-only.** Protocol captures
   (`session-updates.jsonl`, `session-config.json`, `config-updates.jsonl`
   in `$TMPDIR/devin-tui/` — they contain session content) are written only

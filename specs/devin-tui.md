@@ -1,9 +1,10 @@
 # devin-tui — spec (source of truth)
 
 A full-screen terminal UI for Devin driven by `devin acp` (Agent Client
-Protocol, JSON-RPC over stdio). Grayscale only (Devin brand is black & white)
-— depth comes from gray background shades, never hue. Uses the Devin braille
-logo from the real CLI.
+Protocol, JSON-RPC over stdio). Monochrome by default (Devin brand is black &
+white) — depth comes from gray background shades, never hue; other bundled
+themes are opt-in (see Theme system). Uses the Devin braille logo from the
+real CLI.
 
 Visual style is a hybrid: OpenCode's calm layout (borderless panels,
 background shades instead of boxes, centered home screen, overlays that dim
@@ -24,7 +25,8 @@ slash dropdown).
 ## Theme
 
 All styling lives in `src/theme.ts` as named tokens — the only place colors
-are defined. Grayscale palette:
+are defined. The palette is data-driven (see Theme system below); the
+values here are the default `mono` theme, a grayscale palette:
 
 - backgrounds: `bg` #0a0a0a (whole screen), `panel` #141414 (input panel,
   user messages), `overlay` #1a1a1a (popups), `raised` #202020 (inline code),
@@ -58,6 +60,70 @@ are defined. Grayscale palette:
   slider's green→yellow→orange→purple gradient), success/fail dots,
   diff +/- lines, command highlighting, and the bypass tag.
 
+## Theme system
+
+**Amended design rule:** the default theme stays monochrome (the palette
+above), but the palette is data, so users can opt into other themes. UI
+code still speaks only in semantic tokens — `Seg.k` (`Token`) and
+`Seg.bg` (`Bg`) — and never passes `color=` / `backgroundColor=` to Ink;
+`theme.ts` alone maps tokens to styles.
+
+- `interface Theme { colors: Record<Token, StyleDef>; bgs: Record<Bg,
+  string> }`. Bundled themes (`THEMES`): `mono` (default — byte-identical
+  to the palette above), `light` (dark text on near-white gray shades),
+  `nord` (Polar Night shades, Snow Storm text, Frost picker blue). Every
+  theme must define every `Token` and `Bg` key — a missing key is a type
+  error. Within each theme hue is still limited to the same exceptions
+  (`pk*` picker palette, `ok`/`err`, diff bgs, `cmdFlag`/`cmdString`,
+  `pkYellow` bypass tag), drawn from that theme's own palette. `plain`
+  may carry an fg in non-default themes (their `bg` is not the terminal
+  default, so the terminal's own fg could be unreadable); `mono` keeps
+  `plain: {}`.
+- `segStyle(token, bg, hex)` reads a module-level active theme
+  (`setTheme(name)` / `themeName()`); it runs every frame, so a switch
+  re-renders everything on the next render — no restart.
+- Themes affect only the truecolor path. `MONO` (the non-`COLORTERM`
+  fallback: ANSI keywords + bold/dim/inverse) is shared by all themes.
+- Nothing is hardcoded outside the theme: `Seg.hex` (the price-slider's
+  truecolor gradient cells) is interpolated at render time between the
+  active theme's `pkGreen` → `pkYellow` → `pkOrange` → `pkPurple` fgs
+  (`themeFg`), so it re-colors with the theme like everything else.
+- **`auto`** is a preference, not a palette: it renders `light` when the
+  terminal background is light and `mono` otherwise (`themeFor`). At
+  startup (before the alt screen, before Ink owns stdin) `src/termbg.ts`
+  queries the background with OSC 11 (`\x1b]11;?`) fenced by a DA1 query
+  (`\x1b[c` — every terminal answers it, so its reply ends the wait even
+  without OSC 11 support), 500 ms timeout; reply luminance > 0.5 = light.
+  No usable reply → `COLORFGBG` (bg index 7 or 9–15 = light) → undetected
+  (= `mono`). The query runs on every launch so `/theme` can preview
+  `auto` accurately.
+- **Selection** (`src/config.ts` `resolveTheme`), first source that is set
+  wins: `--theme <name>` → `DEVIN_TUI_THEME` env → `theme` in
+  `~/.config/devin-tui/config.json` (`DEVIN_TUI_CONFIG` overrides the
+  path — tests) → `mono`. Values: a theme name or `auto`,
+  case-insensitive. An unknown name
+  falls back to `mono`, never crashes: one line `unknown theme "<x>" (from
+  <source>) — using mono; available: mono, light, nord, auto` is appended to
+  `devin-acp.log` at startup and shown as a transcript system line once
+  the session is ready (not earlier — a transcript item on the boot/auth
+  home would replace the sign-in menu with the session view).
+- **config.json** is the only file devin-tui writes outside `$TMPDIR` and
+  `~/.cache/devin-tui/`: a JSON object `{ "theme": "<name>" }`; writes
+  merge into the existing object (unknown keys kept), `mkdir -p` the
+  directory; missing/invalid JSON reads as `{}`.
+- **/theme** (local command `choose a color theme`; command panel **App**
+  → **Switch theme**, hint `/theme`): an inline picker built on
+  `pickerShell` in the model-picker slot — title `Theme`, ` / type to
+  search` filter, rows = `mono`, `light`, `nord`, `auto` with a faint
+  right-aligned description (`auto`: `follow terminal (light → light)` /
+  `(undetected → mono)`), the preference active when it opened marked `•`, footer `↑↓
+  theme · ↵ confirm · esc cancel`. Moving the selection (or filtering)
+  live-previews that theme; Enter applies it and persists it to
+  config.json (a write error → system line `theme not saved: <err>`, the
+  theme still applies for this run); Esc restores the theme it opened
+  with. Needs no session; allowed while `working`. An agent command named
+  `theme` is filtered like the other local names.
+
 ## Logo
 
 The exact 4×9 CLI braille mark lives in `theme.ts`. `scaleBraille2x` decodes
@@ -84,6 +150,8 @@ on a boot error).
   the auth detour (list errors that are auth failures rethrow and retry
   after sign-in).
 - `-r <id>` / `--resume <id>` — load a specific session id the same way.
+- `--theme <name>` — color theme for this run (see Theme system);
+  overrides `DEVIN_TUI_THEME` and config.json.
 
 ## Process / lifecycle
 
@@ -568,9 +636,10 @@ Rendered with the same `pickerShell` as the model picker, same slot:
   reported, or ` · reported by Devin` when one was; a final line joins any
   summed extra dimensions as `<label> <value><tail|pluralTail>` by ` · `), `/handoff [task]` (see
   below), `/fusion`
-  (see below), `/resume` (see above — session picker), `/help` (see
+  (see below), `/resume` (see above — session picker), `/theme` (see
+  Theme system), `/help` (see
   Overlays → Help). Agent-advertised commands named `login`,
-  `logout`, `status`, `model`, `handoff`, `fusion`, `resume` or `help` are filtered out of
+  `logout`, `status`, `model`, `handoff`, `fusion`, `resume`, `theme` or `help` are filtered out of
   the Agent section and slash dropdown so local commands always win.
 
 ## Spend tracking
@@ -655,7 +724,7 @@ foreground forced to `faint` (dimmed backdrop); the overlay paints on
   Devin → `/handoff`, Switch to Fusion → `/fusion`, Switch model →
   `/model`, Resume session → `/resume`), **Agent** (every advertised
   ACP command minus the locally-handled names), **Account** (Sign in, Sign
-  out, Status), **App** (Help → `/help`, Quit). Items are
+  out, Status), **App** (Switch theme → `/theme`, Help → `/help`, Quit). Items are
   two-column: name bright padded to the widest name + 2, description muted;
   right-aligned shortcut hints muted (ctrl+b, shift+tab, ctrl+c) with 2-col
   right padding. Selected row = selection colors across the full inner
@@ -802,7 +871,10 @@ state to `needsAuth`.
   arrows-with-filter and the session-screen picker; `branchbar`
   (with `DRIVE_CWD=<dir>`) covers the status-bar/home-corner git
   branch incl. a mid-run `git checkout -b` refresh; `fallback` ends
-  on the picker without truecolor.
+  on the picker without truecolor; `theme` (with `DEVIN_TUI_CONFIG=<scratch
+  file>`) opens /theme, previews with ↓, applies + persists, reopens and
+  Esc-restores. The PTY answers the startup DA1 query;
+  `DRIVE_TERM_BG=rgb:ffff/ffff/ffff` also answers OSC 11 (for `auto`).
 - `scripts/snapshot.ts` — ANSI → screen emulator; `--after <marker>` dumps
   the first complete frame containing the marker, `--after-last` the last,
   `--before` the last complete frame before the marker's sync block
