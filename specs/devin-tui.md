@@ -40,8 +40,9 @@ values here are the default `mono` theme, a grayscale palette:
   `╯`); shimmer band `shine1` #ffffff (2 head cells) → `shine2` #cfcfcf
   (3) → `shine3` #9a9a9a (5). Fallback: bezel = dim, band head = bold.
 - Every rendered line is padded to full width so `bg` paints the whole
-  screen; a `Seg` carries an optional `bg` that defaults to the screen shade
-  at render time.
+  screen (unless the theme leaves `bg` unpainted, as `light` does); a
+  `Seg` carries an optional `bg` that defaults to the screen shade at
+  render time.
 - **Fallback**: if `COLORTERM` is not `truecolor`/`24bit`, all hex colors and
   backgrounds drop out — tokens degrade to bold/dim/italic, and selection
   becomes inverse. One switch in `theme.ts`.
@@ -69,11 +70,14 @@ code still speaks only in semantic tokens — `Seg.k` (`Token`) and
 `theme.ts` alone maps tokens to styles.
 
 - `interface Theme { colors: Record<Token, StyleDef>; bgs: Record<Bg,
-  string> }`. Bundled themes (`THEMES`): `mono` (default — byte-identical
-  to the palette above), `light` (dark text on near-white gray shades),
-  `nord` (Polar Night shades, Snow Storm text, Frost picker blue). Every
-  theme must define every `Token` and `Bg` key — a missing key is a type
-  error. Within each theme hue is still limited to the same exceptions
+  string | null> }`. Bundled themes (`THEMES`): `mono` (default —
+  byte-identical to the palette above), `light` (dark text on the
+  terminal's own background — `bg` is `null`, unpainted; panels, popups
+  and code keep their light-gray shades), `nord` (Polar Night shades,
+  Snow Storm text, Frost picker blue). Every theme must define every
+  `Token` and `Bg` key — a missing key is a type error; a `null` `Bg`
+  leaves that region unpainted so the terminal's own background shows
+  through. Within each theme hue is still limited to the same exceptions
   (`pk*` picker palette, `ok`/`err`, diff bgs, `cmdFlag`/`cmdString`,
   `pkYellow` bypass tag), drawn from that theme's own palette. `plain`
   may carry an fg in non-default themes (their `bg` is not the terminal

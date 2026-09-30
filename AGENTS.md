@@ -62,7 +62,9 @@ npx tsx scripts/check-real-devin.ts
   black-and-white palette where depth comes from gray background shades,
   never hue; other bundled themes (`THEMES`, selected via `--theme` /
   `DEVIN_TUI_THEME` / `~/.config/devin-tui/config.json` / `/theme`) must
-  cover every `Token` and `Bg` key and follow the same hue exceptions
+  cover every `Token` and `Bg` key (a `null` `Bg` leaves that region
+  unpainted — `light` uses it for `bg` so the terminal's own background
+  shows) and follow the same hue exceptions
   within their own palette. Never pass `color=` or `backgroundColor=`
   to Ink components; only `theme.ts` maps tokens to styles. Truecolor
   backgrounds/hex foregrounds apply only when `COLORTERM` is
