@@ -1,80 +1,71 @@
 /**
  * Central style tokens for the entire UI — the ONLY place styling is defined.
  *
- * Grayscale palette (Devin brand is black & white): depth comes from gray
- * background shades, never hue. If the terminal lacks truecolor
- * (COLORTERM not truecolor/24bit) all colors drop to attribute-only
- * equivalents (bold/dim/inverse). Hue is allowed only for the picker
- * palette, success/fail dots and diff +/- lines, $ command highlighting,
- * and the bypass-mode tag.
+ * The palette is data-driven: a `Theme` maps every semantic `Token` and
+ * `Bg` region to a truecolor style. The default `mono` theme is grayscale
+ * (Devin brand is black & white): depth comes from gray background shades,
+ * never hue. Other bundled themes are opt-in (`--theme`,
+ * `DEVIN_TUI_THEME`, config.json, `/theme`). If the terminal lacks
+ * truecolor (COLORTERM not truecolor/24bit) every theme drops to the same
+ * attribute-only `MONO` fallback (bold/dim/inverse). Within each theme,
+ * hue is allowed only for the picker palette, success/fail dots and diff
+ * +/- lines, $ command highlighting, and the bypass-mode tag.
  */
 
 export const TRUECOLOR = /^(truecolor|24bit)$/i.test(process.env.COLORTERM ?? '');
 
 export type Bg =
-	| 'bg'
-	| 'panel'
-	| 'overlay'
-	| 'raised'
-	| 'sel'
-	| 'pkSel'
-	| 'pkBlue'
-	| 'diffAdd'
-	| 'diffDel';
-
-export const BG_HEX: Record<Bg, string> = {
-	bg: '#0a0a0a', // whole screen
-	panel: '#141414', // input panel, user messages
-	overlay: '#1a1a1a', // popups
-	raised: '#202020', // inline code, inactive-selected
-	sel: '#e8e8e8', // selection row background
-	// picker palette — the ONE allowed hue exception (Devin CLI /model picker)
-	pkSel: '#1c2530', // selected model row
-	pkBlue: '#4db8ff', // FREE badge background
+	| 'bg' // whole screen
+	| 'panel' // input panel, user messages
+	| 'overlay' // popups
+	| 'raised' // inline code, inactive-selected
+	| 'sel' // selection row background
+	// picker palette — hue exception (Devin CLI /model picker)
+	| 'pkSel' // selected model row
+	| 'pkBlue' // FREE badge background
 	// diff line backgrounds (CLI-matching hue exception)
-	diffAdd: '#12261a', // + lines
-	diffDel: '#2a1414', // − lines
-};
+	| 'diffAdd' // + lines
+	| 'diffDel'; // − lines
 
 export type Token =
-	| 'plain' // default terminal fg
-	| 'text' // #d4d4d4 — body text
-	| 'bright' // #ffffff — values, key names
-	| 'muted' // #7a7a7a — labels
-	| 'faint' // #4a4a4a — lowest-emphasis text
-	| 'rule' // #2a2a2a — separators │ ─
+	| 'plain' // default fg (terminal default in mono)
+	| 'text' // body text
+	| 'bright' // values, key names
+	| 'muted' // labels
+	| 'faint' // lowest-emphasis text
+	| 'rule' // separators │ ─
 	| 'accent' // bright + bold — mode name
 	| 'title' // bright + bold — headings, section titles
 	| 'strong' // bright + bold — **markdown bold**
-	| 'sel' // selection row (bg #e8e8e8 / fg #0a0a0a)
+	| 'sel' // selection row
 	| 'code' // `inline code` — bright on raised
-	| 'err' // #e06c6c — failures, ✗, −M stats, failed text
-	| 'ok' // #3ddc84 — ✓, completed dots, +N stats
-	| 'cmdFlag' // #6cb6ff — -flags in $ command lines
-	| 'cmdString' // #e5a07a — "quoted strings" in $ command lines
+	| 'err' // failures, ✗, −M stats, failed text
+	| 'ok' // ✓, completed dots, +N stats
+	| 'cmdFlag' // -flags in $ command lines
+	| 'cmdString' // "quoted strings" in $ command lines
 	| 'thought' // muted italic — thinking
 	| 'ghost' // faint — detail/thought tail
 	| 'caret' // block cursor
 	| 'spin' // muted spinner
 	// picker palette (blue accent — allowed hue exception for /model)
-	| 'pk' // #4db8ff — selected name, chevron, filled bars, effort label
-	| 'pkBold' // #4db8ff + bold — selected inline-permission row
-	| 'pkDim' // blue, dim — ← → arrows
-	| 'pkOff' // #3a3a3a — unfilled bars
-	| 'pkGreen' // #3ddc84 — "New" badge + price-slider low end
-	| 'pkYellow' // #e6d17a — "Beta" badge + price-slider mid-low
-	| 'pkOrange' // #e5a07a — price-slider mid-high
-	| 'pkPurple' // #b48ead — price-slider high end
-	| 'pkBadge' // reserved: FREE badge (#0a0a0a on #4db8ff)
+	| 'pk' // selected name, chevron, filled bars, effort label
+	| 'pkBold' // pk + bold — selected inline-permission row
+	| 'pkDim' // pk, dim — ← → arrows
+	| 'pkOff' // unfilled bars
+	| 'pkGreen' // "New" badge + price-slider low end
+	| 'pkYellow' // "Beta" badge + price-slider mid-low + bypass tag
+	| 'pkOrange' // price-slider mid-high
+	| 'pkPurple' // price-slider high end
+	| 'pkBadge' // FREE badge (screen bg on pkBlue)
 	// composer frame bezel + working shimmer
-	| 'bezelHi' // #6a6a6a — top/left edge + ╭
-	| 'bezelMid' // #4a4a4a — ╮ ╰ mixed corners
-	| 'bezelLo' // #2e2e2e — bottom/right edge + ╯
-	| 'shine1' // #ffffff — shimmer band head
-	| 'shine2' // #cfcfcf — shimmer band mid
-	| 'shine3'; // #9a9a9a — shimmer band tail
+	| 'bezelHi' // top/left edge + ╭
+	| 'bezelMid' // ╮ ╰ mixed corners
+	| 'bezelLo' // bottom/right edge + ╯
+	| 'shine1' // shimmer band head
+	| 'shine2' // shimmer band mid
+	| 'shine3'; // shimmer band tail
 
-interface StyleDef {
+export interface StyleDef {
 	fg?: string;
 	bg?: Bg;
 	ansi?: string; // ANSI color keyword used in the non-truecolor fallback
@@ -85,43 +76,198 @@ interface StyleDef {
 	inverse?: boolean;
 }
 
-const COLOR: Record<Token, StyleDef> = {
-	plain: {},
-	text: {fg: '#d4d4d4'},
-	bright: {fg: '#ffffff'},
-	muted: {fg: '#7a7a7a'},
-	faint: {fg: '#4a4a4a'},
-	rule: {fg: '#2a2a2a'},
-	accent: {fg: '#ffffff', bold: true},
-	title: {fg: '#ffffff', bold: true},
-	strong: {fg: '#ffffff', bold: true},
-	sel: {fg: '#0a0a0a', bg: 'sel'},
-	code: {fg: '#ffffff', bg: 'raised'},
-	err: {fg: '#e06c6c'},
-	ok: {fg: '#3ddc84'},
-	cmdFlag: {fg: '#6cb6ff'},
-	cmdString: {fg: '#e5a07a'},
-	thought: {fg: '#7a7a7a', italic: true},
-	ghost: {fg: '#4a4a4a'},
-	caret: {fg: '#0a0a0a', bg: 'sel'},
-	spin: {fg: '#7a7a7a'},
-	pk: {fg: '#4db8ff'},
-	pkBold: {fg: '#4db8ff', bold: true},
-	pkDim: {fg: '#4db8ff', dim: true},
-	pkOff: {fg: '#5f6b78'},
-	pkGreen: {fg: '#3ddc84'},
-	pkYellow: {fg: '#e6d17a'},
-	pkOrange: {fg: '#e5a07a'},
-	pkPurple: {fg: '#b48ead'},
-	pkBadge: {fg: '#0a0a0a', bg: 'pkBlue'},
-	bezelHi: {fg: '#6a6a6a'},
-	bezelMid: {fg: '#4a4a4a'},
-	bezelLo: {fg: '#2e2e2e'},
-	shine1: {fg: '#ffffff'},
-	shine2: {fg: '#cfcfcf'},
-	shine3: {fg: '#9a9a9a'},
+/** A truecolor palette: every token and every background region. */
+export interface Theme {
+	colors: Record<Token, StyleDef>;
+	bgs: Record<Bg, string>;
+}
+
+/** Default — the grayscale Devin palette. */
+const mono: Theme = {
+	colors: {
+		plain: {},
+		text: {fg: '#d4d4d4'},
+		bright: {fg: '#ffffff'},
+		muted: {fg: '#7a7a7a'},
+		faint: {fg: '#4a4a4a'},
+		rule: {fg: '#2a2a2a'},
+		accent: {fg: '#ffffff', bold: true},
+		title: {fg: '#ffffff', bold: true},
+		strong: {fg: '#ffffff', bold: true},
+		sel: {fg: '#0a0a0a', bg: 'sel'},
+		code: {fg: '#ffffff', bg: 'raised'},
+		err: {fg: '#e06c6c'},
+		ok: {fg: '#3ddc84'},
+		cmdFlag: {fg: '#6cb6ff'},
+		cmdString: {fg: '#e5a07a'},
+		thought: {fg: '#7a7a7a', italic: true},
+		ghost: {fg: '#4a4a4a'},
+		caret: {fg: '#0a0a0a', bg: 'sel'},
+		spin: {fg: '#7a7a7a'},
+		pk: {fg: '#4db8ff'},
+		pkBold: {fg: '#4db8ff', bold: true},
+		pkDim: {fg: '#4db8ff', dim: true},
+		pkOff: {fg: '#5f6b78'},
+		pkGreen: {fg: '#3ddc84'},
+		pkYellow: {fg: '#e6d17a'},
+		pkOrange: {fg: '#e5a07a'},
+		pkPurple: {fg: '#b48ead'},
+		pkBadge: {fg: '#0a0a0a', bg: 'pkBlue'},
+		bezelHi: {fg: '#6a6a6a'},
+		bezelMid: {fg: '#4a4a4a'},
+		bezelLo: {fg: '#2e2e2e'},
+		shine1: {fg: '#ffffff'},
+		shine2: {fg: '#cfcfcf'},
+		shine3: {fg: '#9a9a9a'},
+	},
+	bgs: {
+		bg: '#0a0a0a',
+		panel: '#141414',
+		overlay: '#1a1a1a',
+		raised: '#202020',
+		sel: '#e8e8e8',
+		pkSel: '#1c2530',
+		pkBlue: '#4db8ff',
+		diffAdd: '#12261a',
+		diffDel: '#2a1414',
+	},
 };
 
+/** Light grayscale — dark text on near-white shades. */
+const light: Theme = {
+	colors: {
+		plain: {fg: '#2a2a2a'},
+		text: {fg: '#2a2a2a'},
+		bright: {fg: '#000000'},
+		muted: {fg: '#6e6e6e'},
+		faint: {fg: '#a3a3a3'},
+		rule: {fg: '#d4d4d4'},
+		accent: {fg: '#000000', bold: true},
+		title: {fg: '#000000', bold: true},
+		strong: {fg: '#000000', bold: true},
+		sel: {fg: '#fafafa', bg: 'sel'},
+		code: {fg: '#000000', bg: 'raised'},
+		err: {fg: '#cf222e'},
+		ok: {fg: '#1a7f37'},
+		cmdFlag: {fg: '#0550ae'},
+		cmdString: {fg: '#953800'},
+		thought: {fg: '#6e6e6e', italic: true},
+		ghost: {fg: '#a3a3a3'},
+		caret: {fg: '#fafafa', bg: 'sel'},
+		spin: {fg: '#6e6e6e'},
+		pk: {fg: '#0969da'},
+		pkBold: {fg: '#0969da', bold: true},
+		pkDim: {fg: '#0969da', dim: true},
+		pkOff: {fg: '#b6c2cf'},
+		pkGreen: {fg: '#1a7f37'},
+		pkYellow: {fg: '#9a6700'},
+		pkOrange: {fg: '#bc4c00'},
+		pkPurple: {fg: '#8250df'},
+		pkBadge: {fg: '#fafafa', bg: 'pkBlue'},
+		bezelHi: {fg: '#8a8a8a'},
+		bezelMid: {fg: '#b0b0b0'},
+		bezelLo: {fg: '#d4d4d4'},
+		shine1: {fg: '#000000'},
+		shine2: {fg: '#404040'},
+		shine3: {fg: '#737373'},
+	},
+	bgs: {
+		bg: '#fafafa',
+		panel: '#f0f0f0',
+		overlay: '#e8e8e8',
+		raised: '#dcdcdc',
+		sel: '#262626',
+		pkSel: '#dbe9fb',
+		pkBlue: '#0969da',
+		diffAdd: '#dafbe1',
+		diffDel: '#ffebe9',
+	},
+};
+
+/** Nord — Polar Night shades, Snow Storm text, Frost picker accent. */
+const nord: Theme = {
+	colors: {
+		plain: {fg: '#d8dee9'},
+		text: {fg: '#d8dee9'},
+		bright: {fg: '#eceff4'},
+		muted: {fg: '#8891a5'},
+		faint: {fg: '#616e88'},
+		rule: {fg: '#434c5e'},
+		accent: {fg: '#eceff4', bold: true},
+		title: {fg: '#eceff4', bold: true},
+		strong: {fg: '#eceff4', bold: true},
+		sel: {fg: '#2e3440', bg: 'sel'},
+		code: {fg: '#eceff4', bg: 'raised'},
+		err: {fg: '#bf616a'},
+		ok: {fg: '#a3be8c'},
+		cmdFlag: {fg: '#81a1c1'},
+		cmdString: {fg: '#d08770'},
+		thought: {fg: '#8891a5', italic: true},
+		ghost: {fg: '#616e88'},
+		caret: {fg: '#2e3440', bg: 'sel'},
+		spin: {fg: '#8891a5'},
+		pk: {fg: '#88c0d0'},
+		pkBold: {fg: '#88c0d0', bold: true},
+		pkDim: {fg: '#88c0d0', dim: true},
+		pkOff: {fg: '#4c566a'},
+		pkGreen: {fg: '#a3be8c'},
+		pkYellow: {fg: '#ebcb8b'},
+		pkOrange: {fg: '#d08770'},
+		pkPurple: {fg: '#b48ead'},
+		pkBadge: {fg: '#2e3440', bg: 'pkBlue'},
+		bezelHi: {fg: '#7b88a1'},
+		bezelMid: {fg: '#616e88'},
+		bezelLo: {fg: '#4c566a'},
+		shine1: {fg: '#eceff4'},
+		shine2: {fg: '#d8dee9'},
+		shine3: {fg: '#a0aabd'},
+	},
+	bgs: {
+		bg: '#2e3440',
+		panel: '#3b4252',
+		overlay: '#434c5e',
+		raised: '#4c566a',
+		sel: '#d8dee9',
+		pkSel: '#3e4d61',
+		pkBlue: '#88c0d0',
+		diffAdd: '#374536',
+		diffDel: '#4a3439',
+	},
+};
+
+export const THEMES = {mono, light, nord} satisfies Record<string, Theme>;
+
+export type ThemeName = keyof typeof THEMES;
+
+export const THEME_NAMES = Object.keys(THEMES) as ThemeName[];
+
+export const DEFAULT_THEME: ThemeName = 'mono';
+
+/** One-line descriptions for the /theme picker. */
+export const THEME_DESC: Record<ThemeName, string> = {
+	mono: 'grayscale (default)',
+	light: 'light grayscale',
+	nord: 'Nord polar night',
+};
+
+export function isThemeName(name: string): name is ThemeName {
+	return Object.hasOwn(THEMES, name);
+}
+
+let activeName: ThemeName = DEFAULT_THEME;
+let active: Theme = THEMES[DEFAULT_THEME];
+
+/** Switch the palette `segStyle` reads — takes effect on the next render. */
+export function setTheme(name: ThemeName): void {
+	activeName = name;
+	active = THEMES[name];
+}
+
+export function themeName(): ThemeName {
+	return activeName;
+}
+
+/** Non-truecolor fallback — shared by every theme. */
 const MONO: Record<Token, StyleDef> = {
 	plain: {},
 	text: {},
@@ -173,7 +319,7 @@ export function segStyle(
 	italic?: boolean;
 	inverse?: boolean;
 } {
-	const d = (TRUECOLOR ? COLOR : MONO)[t ?? 'plain'];
+	const d = (TRUECOLOR ? active.colors : MONO)[t ?? 'plain'];
 	const out: {
 		color?: string;
 		backgroundColor?: string;
@@ -186,7 +332,7 @@ export function segStyle(
 		if (d.fg) out.color = d.fg;
 		if (hex) out.color = hex;
 		const b = bg ?? d.bg;
-		if (b) out.backgroundColor = BG_HEX[b];
+		if (b) out.backgroundColor = active.bgs[b];
 	} else {
 		if (d.ansi) out.color = d.ansi;
 		if (d.ansiBg) out.backgroundColor = d.ansiBg;

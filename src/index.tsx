@@ -4,6 +4,8 @@ import React from 'react';
 import {render} from 'ink';
 import {App} from './ui/App.js';
 import {defaultLogFile, type AgentConn} from './acp/connection.js';
+import {resolveTheme} from './config.js';
+import {setTheme} from './theme.js';
 
 interface CliArgs {
 	cwd: string;
@@ -11,6 +13,7 @@ interface CliArgs {
 	command: string;
 	/** 'continue' = newest session for cwd; otherwise a session id */
 	resume?: string;
+	theme?: string;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -27,9 +30,11 @@ function parseArgs(argv: string[]): CliArgs {
 			args.resume = 'continue';
 		} else if (a === '-r' || a === '--resume') {
 			args.resume = argv[++i] ?? '';
+		} else if (a === '--theme') {
+			args.theme = argv[++i] ?? '';
 		} else if (a === '--help' || a === '-h') {
 			process.stderr.write(
-				'usage: devin-tui [--cwd <dir>] [--model <name>] [--agent "<cmd>"] [-c|--continue] [-r|--resume <id>]\n',
+				'usage: devin-tui [--cwd <dir>] [--model <name>] [--agent "<cmd>"] [-c|--continue] [-r|--resume <id>] [--theme <name>]\n',
 			);
 			process.exit(0);
 		}
@@ -51,6 +56,16 @@ function main(): void {
 		process.exit(1);
 	}
 
+	const theme = resolveTheme(args.theme);
+	setTheme(theme.name);
+	if (theme.warning) {
+		try {
+			fs.appendFileSync(defaultLogFile(), `\ndevin-tui: ${theme.warning}\n`);
+		} catch {
+			// diagnostics must never throw
+		}
+	}
+
 	let conn: AgentConn | undefined;
 	let cleaned = false;
 
@@ -70,6 +85,7 @@ function main(): void {
 			model={args.model}
 			command={args.command}
 			resume={args.resume}
+			themeWarning={theme.warning}
 			onQuit={() => quit(0)}
 			onConn={c => (conn = c)}
 		/>,

@@ -7,6 +7,7 @@ scenarios:
   boot   - quit during the boot screen (ctrl+c x2)
   full   - prompt, permission 'y', palette, scroll, cancel, quit
   short  - prompt, permission 'y', quit (for the 80-col layout)
+  theme  - /theme picker: preview, apply (writes $DEVIN_TUI_CONFIG), esc
 """
 import fcntl
 import os
@@ -591,6 +592,23 @@ SCENARIOS = {
         (2.5, b"/model"),
         (0.3, b"\r"),             # picker open
         (1.5, b"\x03"),
+        (0.4, b"\x03"),
+        (1.0, b""),
+    ],
+    # /theme picker: live preview on ↓, Enter applies + writes config.json
+    # (point DEVIN_TUI_CONFIG at a scratch file), reopen + Esc restores
+    "theme": [
+        (6.0, b"\r"),             # needsAuth menu -> auth
+        (2.5, b"/theme"),
+        (0.3, b"\r"),             # picker open on the active theme
+        (1.0, b"\x1b[B"),         # ↓ preview next theme
+        (1.0, b"\x1b[B"),         # ↓ preview next theme
+        (1.0, b"\r"),             # apply + persist
+        (1.0, b"/theme"),
+        (0.3, b"\r"),             # reopen
+        (1.0, b"\x1b[B"),         # ↓ preview
+        (1.0, ESC),               # esc restores
+        (1.0, b"\x03"),
         (0.4, b"\x03"),
         (1.0, b""),
     ],

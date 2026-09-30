@@ -10,6 +10,7 @@ import {
 import {
 	LOGO_2X,
 	SPINNER,
+	THEME_NAMES,
 	TIPS,
 	VERSION,
 	type Token,
@@ -20,9 +21,11 @@ import {
 	fusionLines,
 	pickerLines,
 	resumeLines,
+	themeLines,
 	type FusionView,
 	type PickerView,
 	type ResumeView,
+	type ThemeView,
 } from './picker.js';
 import {
 	handoffBlock,
@@ -45,6 +48,7 @@ export interface HomeUI {
 	picker?: PickerView;
 	fusion?: FusionView;
 	resume?: ResumeView;
+	theme?: ThemeView;
 	paletteSel: number;
 	slashItems: {name: string; description?: string}[];
 	slashOpen: boolean;
@@ -155,8 +159,12 @@ export function homeLines(
 	// reserves the 3 bottom rows (corner row + 2 blanks)
 	const pkBudget = Math.max(6, rows - input.length - 12);
 	const pkRows = (() => {
-		if ((!ui.picker && !ui.fusion && !ui.resume) || s.status === 'needsAuth')
+		if (
+			(!ui.picker && !ui.fusion && !ui.resume && !ui.theme) ||
+			s.status === 'needsAuth'
+		)
 			return [] as Seg[][];
+		if (ui.theme) return themeLines(ui.theme, THEME_NAMES, w);
 		if (ui.resume) return resumeLines(ui.resume, s.sessionId, s.cwd, w);
 		const mo = findConfigOption(s, 'model');
 		if (!mo) return [] as Seg[][];

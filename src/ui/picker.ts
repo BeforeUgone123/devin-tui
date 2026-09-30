@@ -2,7 +2,7 @@ import type {SessionConfigOption, SessionInfo} from '@agentclientprotocol/sdk';
 import {configGroups, configValues} from '../state/store.js';
 import {levelRank, levelsFor} from '../catalog.js';
 import type {CatalogState, ModelCatalog} from '../catalog.js';
-import type {Token} from '../theme.js';
+import {THEME_DESC, type ThemeName, type Token} from '../theme.js';
 import {padSegs, seg, segsWidth, strWidth, truncSegs, type Seg} from './lines.js';
 import {shortCwd} from './panel.js';
 
@@ -772,6 +772,43 @@ export function resumeLines(
 			];
 		},
 		selectHint: 'session',
+		w,
+	});
+}
+
+// ---- /theme picker ---------------------------------------------------------
+
+export interface ThemeView {
+	sel: number; // index into the filtered theme list
+	filter: string;
+	/** theme applied when the picker opened — restored on Esc */
+	orig: ThemeName;
+}
+
+export function filterThemes(names: ThemeName[], filter: string): ThemeName[] {
+	const q = filter.trim().toLowerCase();
+	return names.filter(n => !q || n.includes(q));
+}
+
+/** The /theme picker — pickerShell rows of bundled theme names, faint
+ *  right-aligned description, `•` on the applied (pre-open) theme. */
+export function themeLines(
+	view: ThemeView,
+	names: ThemeName[],
+	w: number,
+): Seg[][] {
+	const filtered = filterThemes(names, view.filter);
+	return pickerShell({
+		title: 'Theme',
+		filter: view.filter,
+		display: filtered.map((n, i) => ({opt: {value: n, name: n}, idx: i})),
+		sel: view.sel,
+		isCurrent: o => o.value === view.orig,
+		rowMeta: (o, bg) => {
+			const desc = THEME_DESC[o.value as ThemeName];
+			return desc ? [seg(desc, bg === 'pkSel' ? 'pkDim' : 'faint', bg)] : [];
+		},
+		selectHint: 'theme',
 		w,
 	});
 }
