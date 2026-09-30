@@ -77,10 +77,12 @@ export interface StyleDef {
 	inverse?: boolean;
 }
 
-/** A truecolor palette: every token and every background region. */
+/** A truecolor palette: every token and every background region.
+ *  A `null` `Bg` leaves that region unpainted — the terminal's own
+ *  background shows through (light uses it for `bg`). */
 export interface Theme {
 	colors: Record<Token, StyleDef>;
-	bgs: Record<Bg, string>;
+	bgs: Record<Bg, string | null>;
 }
 
 /** Default — the grayscale Devin palette. */
@@ -134,7 +136,8 @@ const mono: Theme = {
 	},
 };
 
-/** Light grayscale — dark text on near-white shades. */
+/** Light grayscale — dark text on the terminal's own background
+ *  (`bg` unpainted); region shades for panels, popups, code. */
 const light: Theme = {
 	colors: {
 		plain: {fg: '#2a2a2a'},
@@ -173,7 +176,7 @@ const light: Theme = {
 		shine3: {fg: '#737373'},
 	},
 	bgs: {
-		bg: '#fafafa',
+		bg: null,
 		panel: '#f0f0f0',
 		overlay: '#e8e8e8',
 		raised: '#dcdcdc',
@@ -252,7 +255,7 @@ export const THEME_PREFS: ThemePref[] = [...THEME_NAMES, 'auto'];
 /** One-line descriptions for the /theme picker. */
 export const THEME_DESC: Record<ThemeName, string> = {
 	mono: 'grayscale (default)',
-	light: 'light grayscale',
+	light: 'light on terminal bg',
 	nord: 'Nord polar night',
 };
 
@@ -362,7 +365,8 @@ export function segStyle(
 		if (d.fg) out.color = d.fg;
 		if (hex) out.color = hex;
 		const b = bg ?? d.bg;
-		if (b) out.backgroundColor = active.bgs[b];
+		const v = b ? active.bgs[b] : undefined;
+		if (v) out.backgroundColor = v;
 	} else {
 		if (d.ansi) out.color = d.ansi;
 		if (d.ansiBg) out.backgroundColor = d.ansiBg;
