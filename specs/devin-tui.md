@@ -84,14 +84,26 @@ code still speaks only in semantic tokens — `Seg.k` (`Token`) and
   re-renders everything on the next render — no restart.
 - Themes affect only the truecolor path. `MONO` (the non-`COLORTERM`
   fallback: ANSI keywords + bold/dim/inverse) is shared by all themes.
-- `Seg.hex` (the price-slider's truecolor gradient cells) is intentionally
-  theme-exempt — hardcoded in `picker.ts`.
+- Nothing is hardcoded outside the theme: `Seg.hex` (the price-slider's
+  truecolor gradient cells) is interpolated at render time between the
+  active theme's `pkGreen` → `pkYellow` → `pkOrange` → `pkPurple` fgs
+  (`themeFg`), so it re-colors with the theme like everything else.
+- **`auto`** is a preference, not a palette: it renders `light` when the
+  terminal background is light and `mono` otherwise (`themeFor`). At
+  startup (before the alt screen, before Ink owns stdin) `src/termbg.ts`
+  queries the background with OSC 11 (`\x1b]11;?`) fenced by a DA1 query
+  (`\x1b[c` — every terminal answers it, so its reply ends the wait even
+  without OSC 11 support), 500 ms timeout; reply luminance > 0.5 = light.
+  No usable reply → `COLORFGBG` (bg index 7 or 9–15 = light) → undetected
+  (= `mono`). The query runs on every launch so `/theme` can preview
+  `auto` accurately.
 - **Selection** (`src/config.ts` `resolveTheme`), first source that is set
   wins: `--theme <name>` → `DEVIN_TUI_THEME` env → `theme` in
   `~/.config/devin-tui/config.json` (`DEVIN_TUI_CONFIG` overrides the
-  path — tests) → `mono`. Names are case-insensitive. An unknown name
+  path — tests) → `mono`. Values: a theme name or `auto`,
+  case-insensitive. An unknown name
   falls back to `mono`, never crashes: one line `unknown theme "<x>" (from
-  <source>) — using mono; available: mono, light, nord` is appended to
+  <source>) — using mono; available: mono, light, nord, auto` is appended to
   `devin-acp.log` at startup and shown as a transcript system line once
   the session is ready (not earlier — a transcript item on the boot/auth
   home would replace the sign-in menu with the session view).
@@ -102,8 +114,9 @@ code still speaks only in semantic tokens — `Seg.k` (`Token`) and
 - **/theme** (local command `choose a color theme`; command panel **App**
   → **Switch theme**, hint `/theme`): an inline picker built on
   `pickerShell` in the model-picker slot — title `Theme`, ` / type to
-  search` filter, rows = theme names with a faint right-aligned
-  description, the theme active when it opened marked `•`, footer `↑↓
+  search` filter, rows = `mono`, `light`, `nord`, `auto` with a faint
+  right-aligned description (`auto`: `follow terminal (light → light)` /
+  `(undetected → mono)`), the preference active when it opened marked `•`, footer `↑↓
   theme · ↵ confirm · esc cancel`. Moving the selection (or filtering)
   live-previews that theme; Enter applies it and persists it to
   config.json (a write error → system line `theme not saved: <err>`, the
@@ -860,7 +873,8 @@ state to `needsAuth`.
   branch incl. a mid-run `git checkout -b` refresh; `fallback` ends
   on the picker without truecolor; `theme` (with `DEVIN_TUI_CONFIG=<scratch
   file>`) opens /theme, previews with ↓, applies + persists, reopens and
-  Esc-restores.
+  Esc-restores. The PTY answers the startup DA1 query;
+  `DRIVE_TERM_BG=rgb:ffff/ffff/ffff` also answers OSC 11 (for `auto`).
 - `scripts/snapshot.ts` — ANSI → screen emulator; `--after <marker>` dumps
   the first complete frame containing the marker, `--after-last` the last,
   `--before` the last complete frame before the marker's sync block

@@ -74,7 +74,9 @@ npx tsx scripts/check-real-devin.ts
   `$ command` highlighting (`cmdFlag`/`cmdString`), and the yellow
   `bypass permissions on` composer tag (`pkYellow`). Themes only affect
   the truecolor path; `MONO` is shared. `Seg.hex` (price-slider gradient)
-  is theme-exempt.
+  is derived from the active theme's `pk*` fgs — never hardcode colors
+  outside `theme.ts`. `auto` follows the terminal background (OSC 11 /
+  `COLORFGBG`, `src/termbg.ts`).
 - **Config capture is debug-only.** Protocol captures
   (`session-updates.jsonl`, `session-config.json`, `config-updates.jsonl`
   in `$TMPDIR/devin-tui/` — they contain session content) are written only

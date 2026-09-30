@@ -23,7 +23,7 @@ import {
 	type ResumeView,
 	type ThemeView,
 } from './picker.js';
-import {THEME_NAMES} from '../theme.js';
+import {THEME_PREFS} from '../theme.js';
 import {
 	displayMode,
 	displayModel,
@@ -125,7 +125,7 @@ export function sessionLines(
 	const resumeRows = ui.resume
 		? resumeLines(ui.resume, s.sessionId, s.cwd, w)
 		: [];
-	const themeRows = ui.theme ? themeLines(ui.theme, THEME_NAMES, w) : [];
+	const themeRows = ui.theme ? themeLines(ui.theme, THEME_PREFS, w) : [];
 	const handoffRows = ui.handoff ? handoffBlock(ui.handoff, w) : [];
 	const aux = [
 		...plan,

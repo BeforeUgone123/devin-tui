@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {DEFAULT_THEME, isThemeName, THEME_NAMES, type ThemeName} from './theme.js';
+import {DEFAULT_THEME, isThemePref, THEME_PREFS, type ThemePref} from './theme.js';
 
 /** User preferences persisted at ~/.config/devin-tui/config.json
  *  (`DEVIN_TUI_CONFIG` overrides the path — tests). */
@@ -42,7 +42,7 @@ export function writeConfig(patch: UserConfig): void {
 }
 
 export interface ThemeChoice {
-	name: ThemeName;
+	name: ThemePref;
 	/** set when the requested theme is unknown and `mono` was used */
 	warning?: string;
 }
@@ -60,9 +60,9 @@ export function resolveTheme(flag: string | undefined): ThemeChoice {
 				: [readConfig().theme, configPath()];
 	if (want === undefined) return {name: DEFAULT_THEME};
 	const name = want.trim().toLowerCase();
-	if (isThemeName(name)) return {name};
+	if (isThemePref(name)) return {name};
 	return {
 		name: DEFAULT_THEME,
-		warning: `unknown theme "${want}" (from ${source}) — using ${DEFAULT_THEME}; available: ${THEME_NAMES.join(', ')}`,
+		warning: `unknown theme "${want}" (from ${source}) — using ${DEFAULT_THEME}; available: ${THEME_PREFS.join(', ')}`,
 	};
 }

@@ -5,7 +5,8 @@
  * `Bg` region to a truecolor style. The default `mono` theme is grayscale
  * (Devin brand is black & white): depth comes from gray background shades,
  * never hue. Other bundled themes are opt-in (`--theme`,
- * `DEVIN_TUI_THEME`, config.json, `/theme`). If the terminal lacks
+ * `DEVIN_TUI_THEME`, config.json, `/theme`); `auto` follows the terminal's
+ * background (mono on dark, light on light). If the terminal lacks
  * truecolor (COLORTERM not truecolor/24bit) every theme drops to the same
  * attribute-only `MONO` fallback (bold/dim/inverse). Within each theme,
  * hue is allowed only for the picker palette, success/fail dots and diff
@@ -243,6 +244,11 @@ export const THEME_NAMES = Object.keys(THEMES) as ThemeName[];
 
 export const DEFAULT_THEME: ThemeName = 'mono';
 
+/** A user preference: a bundled theme, or `auto` (follow the terminal). */
+export type ThemePref = ThemeName | 'auto';
+
+export const THEME_PREFS: ThemePref[] = [...THEME_NAMES, 'auto'];
+
 /** One-line descriptions for the /theme picker. */
 export const THEME_DESC: Record<ThemeName, string> = {
 	mono: 'grayscale (default)',
@@ -250,21 +256,45 @@ export const THEME_DESC: Record<ThemeName, string> = {
 	nord: 'Nord polar night',
 };
 
-export function isThemeName(name: string): name is ThemeName {
-	return Object.hasOwn(THEMES, name);
+export function isThemePref(name: string): name is ThemePref {
+	return name === 'auto' || Object.hasOwn(THEMES, name);
 }
 
-let activeName: ThemeName = DEFAULT_THEME;
+export type TermBg = 'dark' | 'light';
+
+let termBg: TermBg | undefined;
+let activePref: ThemePref = DEFAULT_THEME;
 let active: Theme = THEMES[DEFAULT_THEME];
 
-/** Switch the palette `segStyle` reads — takes effect on the next render. */
-export function setTheme(name: ThemeName): void {
-	activeName = name;
-	active = THEMES[name];
+/** Record the detected terminal background that `auto` follows. */
+export function setTermBg(bg: TermBg | undefined): void {
+	termBg = bg;
+	if (activePref === 'auto') setTheme('auto');
 }
 
-export function themeName(): ThemeName {
-	return activeName;
+export function terminalBg(): TermBg | undefined {
+	return termBg;
+}
+
+/** The bundled theme a preference renders with. */
+export function themeFor(pref: ThemePref): ThemeName {
+	if (pref !== 'auto') return pref;
+	return termBg === 'light' ? 'light' : DEFAULT_THEME;
+}
+
+/** Switch the palette `segStyle` reads — takes effect on the next render. */
+export function setTheme(pref: ThemePref): void {
+	activePref = pref;
+	active = THEMES[themeFor(pref)];
+}
+
+export function themePref(): ThemePref {
+	return activePref;
+}
+
+/** Truecolor fg of a token in the active theme (gradient stops). */
+export function themeFg(t: Token): string | undefined {
+	return active.colors[t].fg;
 }
 
 /** Non-truecolor fallback — shared by every theme. */

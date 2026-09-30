@@ -10,7 +10,7 @@ import {
 import {
 	LOGO_2X,
 	SPINNER,
-	THEME_NAMES,
+	THEME_PREFS,
 	TIPS,
 	VERSION,
 	type Token,
@@ -164,7 +164,7 @@ export function homeLines(
 			s.status === 'needsAuth'
 		)
 			return [] as Seg[][];
-		if (ui.theme) return themeLines(ui.theme, THEME_NAMES, w);
+		if (ui.theme) return themeLines(ui.theme, THEME_PREFS, w);
 		if (ui.resume) return resumeLines(ui.resume, s.sessionId, s.cwd, w);
 		const mo = findConfigOption(s, 'model');
 		if (!mo) return [] as Seg[][];

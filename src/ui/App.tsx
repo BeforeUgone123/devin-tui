@@ -66,7 +66,7 @@ import {
 	type ResumeView,
 	type ThemeView,
 } from './picker.js';
-import {setTheme, THEME_NAMES, themeName} from '../theme.js';
+import {setTheme, THEME_PREFS, themePref} from '../theme.js';
 import {writeConfig} from '../config.js';
 import {transcriptDigest} from './transcript.js';
 import {
@@ -771,10 +771,10 @@ export function App({cwd, model, command, resume, themeWarning, onQuit, onConn}:
 
 	/** /theme — inline picker over the bundled themes (live preview). */
 	const openTheme = useCallback(() => {
-		const cur = themeName();
+		const cur = themePref();
 		setPrompt({value: '', cursor: 0});
 		setPaletteSel(0);
-		setThemeView({sel: Math.max(0, THEME_NAMES.indexOf(cur)), filter: '', orig: cur});
+		setThemeView({sel: Math.max(0, THEME_PREFS.indexOf(cur)), filter: '', orig: cur});
 	}, []);
 
 	/** /resume — list this cwd's sessions and open the inline picker. */
@@ -1380,11 +1380,11 @@ export function App({cwd, model, command, resume, themeWarning, onQuit, onConn}:
 		const tv = themeRef.current;
 		if (tv) {
 			const pick = (v: ThemeView) => {
-				const list = filterThemes(THEME_NAMES, v.filter);
+				const list = filterThemes(THEME_PREFS, v.filter);
 				setTheme(list[Math.min(v.sel, list.length - 1)] ?? v.orig);
 				setThemeView(v);
 			};
-			const list = filterThemes(THEME_NAMES, tv.filter);
+			const list = filterThemes(THEME_PREFS, tv.filter);
 			const n = Math.max(1, list.length);
 			if (key.escape) {
 				setTheme(tv.orig);

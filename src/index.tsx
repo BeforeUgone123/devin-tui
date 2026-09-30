@@ -5,7 +5,8 @@ import {render} from 'ink';
 import {App} from './ui/App.js';
 import {defaultLogFile, type AgentConn} from './acp/connection.js';
 import {resolveTheme} from './config.js';
-import {setTheme} from './theme.js';
+import {setTermBg, setTheme} from './theme.js';
+import {detectTermBg} from './termbg.js';
 
 interface CliArgs {
 	cwd: string;
@@ -45,7 +46,7 @@ function parseArgs(argv: string[]): CliArgs {
 const ENTER_ALT = '\x1b[?1049h\x1b[?25l\x1b]0;devin-tui\x07';
 const LEAVE_ALT = '\x1b[?25h\x1b[?1049l\x1b]0;devin-tui\x07';
 
-function main(): void {
+async function main(): Promise<void> {
 	const args = parseArgs(process.argv.slice(2));
 	if (!fs.statSync(args.cwd, {throwIfNoEntry: false})?.isDirectory()) {
 		process.stderr.write(`devin-tui: --cwd is not a directory: ${args.cwd}\n`);
@@ -57,6 +58,7 @@ function main(): void {
 	}
 
 	const theme = resolveTheme(args.theme);
+	setTermBg(await detectTermBg());
 	setTheme(theme.name);
 	if (theme.warning) {
 		try {
@@ -139,4 +141,4 @@ function main(): void {
 	});
 }
 
-main();
+void main();
